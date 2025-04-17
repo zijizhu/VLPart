@@ -103,7 +103,7 @@ class VLMROIHeads(StandardROIHeads):
 
     def forward(self, images, img_features, proposals, targets=None,
                 ann_type='box', classifier_info=(None,None,None),
-                dataset_source=None):
+                dataset_source=None, return_scores_only=False):
         del images
         features = [img_features[f] for f in self.box_in_features]
         image_sizes = [x.image_size for x in proposals]
@@ -164,6 +164,9 @@ class VLMROIHeads(StandardROIHeads):
                           for cs, ps in zip(category_scores, proposal_scores)]
             else:
                 scores = category_scores
+
+            if return_scores_only:
+                return scores
 
             predictor = self.box_predictor
             pred_instances, _ = fast_rcnn_inference(

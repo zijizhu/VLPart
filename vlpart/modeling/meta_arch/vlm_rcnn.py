@@ -1,31 +1,21 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import logging
-import numpy as np
-import itertools
 from typing import Dict, List, Optional, Tuple
 import torch
 import torch.nn.functional as F
 from torch import nn
 
 from detectron2.config import configurable
-from detectron2.data.detection_utils import convert_image_to_rgb
 from detectron2.layers import move_device_like, batched_nms
-from detectron2.structures import ImageList, Boxes, Instances, BitMasks, ROIMasks
-from detectron2.utils.events import get_event_storage
-from detectron2.utils.logger import log_first_n
-import detectron2.utils.comm as comm
+from detectron2.structures import ImageList, ROIMasks, Instances, Boxes
 
 from detectron2.modeling import META_ARCH_REGISTRY
 from detectron2.modeling.backbone import Backbone, build_backbone
-from detectron2.modeling.postprocessing import detector_postprocess
 from detectron2.modeling.proposal_generator import build_proposal_generator
 from detectron2.modeling.roi_heads import build_roi_heads
 from torch.cuda.amp import autocast
 
 from ..text_encoder.text_encoder import build_text_encoder
-from ..utils.detic import load_class_freq, get_fed_loss_inds
-
-import clip
+from ..utils.detic import load_class_freq
 
 
 @META_ARCH_REGISTRY.register()
@@ -51,6 +41,7 @@ class VLMRCNN(nn.Module):
         text_encoder_type="ViT-B/32",
         text_encoder_dim=512,
         dynamic_classifier=False,
+        **kwargs
     ):
         super().__init__()
 
@@ -133,7 +124,7 @@ class VLMRCNN(nn.Module):
     def _move_to_current_device(self, x):
         return move_device_like(x, self.pixel_mean)
 
-    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]]):
+    def forward(self, batched_inputs: List[Dict[str, torch.Tensor | Instances]]):
         """
         """
         if not self.training:
@@ -269,7 +260,7 @@ class VLMRCNN(nn.Module):
 
 
 def custom_detector_postprocess(
-        results: Instances, output_height: int, output_width: int,
+        results: Instances, output_height: int | torch.Tensor, output_width: int | torch.Tensor,
         max_shape, mask_threshold: float = 0.5
 ):
     """
