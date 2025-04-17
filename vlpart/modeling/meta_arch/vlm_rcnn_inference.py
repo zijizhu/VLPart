@@ -135,18 +135,6 @@ class VLMRCNNInference(nn.Module):
 
         images = self.preprocess_image(batched_inputs)
         features = self.backbone(images.tensor)
-        # proposals, _ = self.proposal_generator(images, features)
-        # proposals = [
-        #     Instances(image_size=(800, 1201),
-        #               proposal_boxes=Boxes(torch.tensor([[520, 120, 700, 300]])),
-        #               objectness_logits=torch.tensor([8.7630]))
-        # ]
-        for layer, feat in features.items():
-            print(layer, feat.shape)
-        print("proposals", type(proposals), len(proposals))
-        print("proposals[0]", proposals[0])
-        print(proposals[0].proposal_boxes.tensor.shape)
-        print(proposals[0].objectness_logits.shape)
 
         results = self.roi_heads(images, features, proposals, return_scores_only=True)
 
@@ -156,12 +144,8 @@ class VLMRCNNInference(nn.Module):
         """
         Normalize, pad and batch the input images.
         """
-        print("self.backbone.size_divisibility", self.backbone.size_divisibility)
-        print("self.backbone.padding_constraints", self.backbone.padding_constraints)
-        print("batched_inputs", batched_inputs[0]["image"].shape)
         original_images = [self._move_to_current_device(x["image"]) for x in batched_inputs]
         images = [(x - self.pixel_mean) / self.pixel_std for x in original_images]
-        print("images", images[0].shape)
         images = ImageList.from_tensors(
             images,
             self.backbone.size_divisibility,
